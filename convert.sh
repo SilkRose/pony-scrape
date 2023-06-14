@@ -3,6 +3,8 @@
 path="transcripts"
 output_path="transcripts_md"
 
+rm -rf "${output_path:?}"/*
+
 mkdir -p "$output_path"
 
 find "$path" -type f -name "*.txt" | while IFS= read -r filepath; do
@@ -12,18 +14,12 @@ find "$path" -type f -name "*.txt" | while IFS= read -r filepath; do
         relative_dir=${directory#"$path"}
 
         content=$(<"$filepath")
-
-        # Remove lines with only ":"
-        content=$(echo "$content" | awk '!/^\s*:\s*$/')
-
-        # Replace empty lines with a line break
-        content=$(echo "$content" | awk '{if (NF==0) {print "\n***\n"} else {print}}')
-
-        # Format dialogue lines with a new line after the character name
-        content=$(echo "$content" | sed -E "s/^:+\s*//; s/([^:]+):\s*(.*)/\n\n**\1**:\n\2/")
-
-        # Format character names by adding a colon and space
-        content=$(echo "$content" | sed -E "s/([^:\n]+):/\\1:  /")
+        content=$(awk '{if (NF==0) {print "\n***\n"} else {print}}' <<< "$content")
+        content=$(sed -E "s/^:+\s*//; s/([^:]+):\s*(.*)/\n\n**\1**:\n\2/" <<< "$content")
+        content=$(sed -E "s/([^:\n]+):/\\1:  /" <<< "$content")
+        content=$(sed "s/'''//g" <<< "$content")
+        content=$(sed "s/''/*/g" <<< "$content")
+        content=$(sed '/^$/N;/^\n$/D' <<< "$content")
 
         output_directory="$output_path$relative_dir"
         mkdir -p "$output_directory"
